@@ -68,8 +68,11 @@ resource "null_resource" "oc_id-supermarket" {
     command = <<EOC
 rm -rf .supermarket ; mkdir -p .supermarket
 bash files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
-# THIS IS THE MOST AWFUL SED LINE IN THE UNIVERSE!!!!!!!
-sed "s/\(configuration.*\)\",/\1\\\noc_id['applications'] = {\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback'\\\n  }\\\n}\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
+grep -q 'applications' .supermarket/attributes.json.orig
+result=$?
+[ $result -eq 0 ] && sed "s/\(configuration.*}\)\\\n}\\\n\",/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n}\\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
+[ $result -ne 0 ] && sed "s/\(configuration.*\)\",/\1\\\noc_id['applications'] = {\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback'\\\n  }\\\n}\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
+echo "Modified Chef server attributes"
 EOC
   }
   # Upload new attributes file
