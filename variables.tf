@@ -117,11 +117,11 @@ variable "chef_org_validator" {
 }
 variable "domain" {
   description = "Server domain name"
-  default     = "supermarket-01"
+  default     = "localdomain"
 }
 variable "hostname" {
   description = "Server hostname"
-  default     = "localhost"
+  default     = "supermarket-01"
 }
 variable "knife_rb" {
   description = "Path to your knife.rb configuration"
