@@ -67,7 +67,9 @@ resource "null_resource" "oc_id-supermarket" {
   provisioner "local-exec" {
     command = <<-EOC
       rm -rf .supermarket ; mkdir -p .supermarket
-      bash files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
+      bash ${path.module}/files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
+      grep -q 'applications' .supermarket/attributes.json.orig
+      [ $? -ne 0 ] && rm -f .supermarket/attributes.json.orig && echo "Taking a 30s nap" && sleep 30 && bash ${path.module}/files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
       grep -q 'applications' .supermarket/attributes.json.orig
       result=$?
       [ $result -eq 0 ] && sed "s/\(configuration.*}\)\\\n}\\\n\",/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n}\\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
