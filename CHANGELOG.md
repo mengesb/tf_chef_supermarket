@@ -3,6 +3,10 @@ tf_chef_supermarket CHANGELOG
 
 This file is used to list changes made in each version of the tf_chef_supermarket Terraform plan.
 
+v0.0.4 (2016-04-20)
+-------------------
+- [Brian Menges] - Specify provider so that defaults can be overwritten
+
 v0.0.3 (2016-04-20)
 -------------------
 - [Brian Menges] - Added `security_group_id` to `outputs.tf`
