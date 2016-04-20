@@ -8,4 +8,7 @@ output "private_ip" {
 output "public_ip" {
   value = "${aws_instance.chef-supermarket.public_ip}"
 }
+output "security_group_id" {
+  value = "${aws_security_group.chef-supermarket.id}"
+}
 
