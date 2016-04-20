@@ -1,9 +1,17 @@
 {
+  "chef_client": {
+    "init_style": "none"
+  },
+  "fqdn": "${host}.${domain}",
+  "firewall": {
+    "allow_established": true,
+    "allow_ssh": true
+  },
   "supermarket_omnibus": {
-    "chef_server_url": "${chef_fqdn}",
     "chef_oauth2_app_id": "${oauth_id}",
     "chef_oauth2_secret": "${oauth_sec}",
     "chef_oauth2_verify_ssl": true,
+    "chef_server_url": "${chef_fqdn}",
     "config": {
       "ssl": {
         "certificate": "${cert}",
@@ -11,16 +19,11 @@
       }
     }
   },
-  "fqdn": "${host}.${domain}",
-  "firewall": {
-    "allow_established": true,
-    "allow_ssh": true
-  },
   "system": {
-    "short_hostname": "${host}",
+    "delay_network_restart": false,
     "domain_name": "${domain}",
-    "manage_hostsfile": true
+    "manage_hostsfile": true,
+    "short_hostname": "${host}"
   },
   "tags": []
 }
-

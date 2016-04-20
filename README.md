@@ -46,17 +46,20 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 
 * `allowed_cidrs`: The comma seperated list of addresses in CIDR format to allow SSH access. Default: `0.0.0.0/0`
 * `chef_fqdn`: DNS address of the CHEF Server
-* `chef_org_short`: Chef organization to join to
-* `domain`: Server's basename. Default: `localdomain`
-* `hostname`: Chef server's basename. Default: `supermarket`
-* `r53`: Boolean determines if Route53 will be used or not. Default: `0`
-* `r53_ttl`: Time to Live (TTL) setting for Route53 A record to be created. Default: `180`
-* `r53_zone_id`: AWS Route53 Zone ID to add an A record for the Chef Server
-* `r53_zone_internal_id`: AWS Route53 Internal Zone ID to add an A record for the Chef Server
+* `chef_org`: Chef organization to join to
+* `chef_org_validator`: Path to your organization validation PEM
+* `client_version`: Chef client version. Default: `12.8.1`
+* `domain`: Server's domain name. Default: `localdomain`
+* `hostname`: Server's hostname. Default: `analytics`
+* `knife_rb`: Path to your knife.rb configuration
+* `log_to_file`: Output chef-client runtime to logfiles/
+* `public_ip`: Associate public IP to instance. Default `true`
+* `root_delete_termination`: Delete root device on VM termination. Default: `true`
 * `server_count`: Server count. Default: `1`; DO NOT CHANGE!
 * `ssl_cert`: Server SSL certificate in PEM format
 * `ssl_key`: Server SSL certificate key
 * `tag_description`: Text field tag 'Description'
+* `wait_on`: Method for passing in dependencies through modules to control workflow
 
 ### Map variables
 

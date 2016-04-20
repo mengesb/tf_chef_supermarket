@@ -1,4 +1,4 @@
-# Chef Supermarket AWS security group
+# Chef Supermarket AWS security group - https://docs.chef.io/supermarket.html
 resource "aws_security_group" "chef-supermarket" {
   name        = "${var.hostname}.${var.domain} security group"
   description = "Supermarket server ${var.hostname}.${var.domain}"
@@ -65,15 +65,15 @@ resource "null_resource" "oc_id-supermarket" {
   }
   # Generate new attributes file with supermarket oc_id subscription
   provisioner "local-exec" {
-    command = <<EOC
-rm -rf .supermarket ; mkdir -p .supermarket
-bash files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
-grep -q 'applications' .supermarket/attributes.json.orig
-result=$?
-[ $result -eq 0 ] && sed "s/\(configuration.*}\)\\\n}\\\n\",/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n}\\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
-[ $result -ne 0 ] && sed "s/\(configuration.*\)\",/\1\\\noc_id['applications'] = {\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback'\\\n  }\\\n}\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
-echo "Modified Chef server attributes"
-EOC
+    command = <<-EOC
+      rm -rf .supermarket ; mkdir -p .supermarket
+      bash files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
+      grep -q 'applications' .supermarket/attributes.json.orig
+      result=$?
+      [ $result -eq 0 ] && sed "s/\(configuration.*}\)\\\n}\\\n\",/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n}\\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
+      [ $result -ne 0 ] && sed "s/\(configuration.*\)\",/\1\\\noc_id['applications'] = {\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback'\\\n  }\\\n}\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
+      echo "Modified Chef server attributes"
+      EOC
   }
   # Upload new attributes file
   provisioner "file" {
@@ -115,27 +115,36 @@ EOC
   }
   # Use Perl magic to slip in the app id and secret
   provisioner "local-exec" {
-    command = <<EOC
-cat > .supermarket/${var.hostname}.${var.domain}-attributes.json <<EOF
-${template_file.attributes-json.rendered}
-EOF
-cd .supermarket && perl -pe 's/text1/`cat chef_oauth2_app_id`/ge' -i ${var.hostname}.${var.domain}-attributes.json && cd ..
-cd .supermarket && perl -pe 's/text2/`cat chef_oauth2_secret`/ge' -i ${var.hostname}.${var.domain}-attributes.json && cd ..
-EOC
+    command = <<-EOC
+      cat > .supermarket/${var.hostname}.${var.domain}-attributes.json <<EOF
+      ${template_file.attributes-json.rendered}
+      EOF
+      cd .supermarket && perl -pe 's/text1/`cat chef_oauth2_app_id`/ge' -i ${var.hostname}.${var.domain}-attributes.json && cd ..
+      cd .supermarket && perl -pe 's/text2/`cat chef_oauth2_secret`/ge' -i ${var.hostname}.${var.domain}-attributes.json && cd ..
+      EOC
   }
 }
 module "ocid-attributes" {
-  source = "ocid-attributes"
+  source     = "ocid-attributes"
   attributes = ".supermarket/${var.hostname}.${var.domain}-attributes.json"
 }
 #
-# Supermarket
+# Wait on
+#
+resource "null_resource" "wait_on" {
+  provisioner "local-exec" {
+    command = "echo Waited on ${var.wait_on} before proceeding"
+  }
+}
+#
+# Provision server
 #
 resource "aws_instance" "chef-supermarket" {
-  depends_on    = ["null_resource.oc_id-supermarket"]
+  depends_on    = ["null_resource.oc_id-supermarket","null_resource.wait_on"]
   ami           = "${lookup(var.ami_map, format("%s-%s", var.ami_os, var.aws_region))}"
   count         = "${var.server_count}"
   instance_type = "${var.aws_flavor}"
+  associate_public_ip_address = "${var.public_ip}"
   subnet_id     = "${var.aws_subnet_id}"
   vpc_security_group_ids = ["${aws_security_group.chef-supermarket.id}"]
   key_name      = "${var.aws_key_name}"
@@ -144,7 +153,7 @@ resource "aws_instance" "chef-supermarket" {
     Description = "${var.tag_description}"
   }
   root_block_device = {
-    delete_on_termination = true
+    delete_on_termination = "${var.root_delete_termination}"
   }
   connection {
     user        = "${lookup(var.ami_usermap, var.ami_os)}"
@@ -190,29 +199,13 @@ resource "aws_instance" "chef-supermarket" {
   provisioner "chef" {
     attributes_json = "${file("${module.ocid-attributes.attributes}")}"
     environment     = "_default"
-    run_list        = ["recipe[system::default]","recipe[supermarket-omnibus-cookbook::default]"]
+    log_to_file     = "${var.log_to_file}"
     node_name       = "${aws_instance.chef-supermarket.tags.Name}"
+    run_list        = ["recipe[system::default]","recipe[chef-client::default]","recipe[chef-client::config]","recipe[chef-client::delete_validation]","recipe[supermarket-omnibus-cookbook::default]"]
     server_url      = "https://${var.chef_fqdn}/organizations/${var.chef_org}"
     validation_client_name = "${var.chef_org}-validator"
     validation_key  = "${file("${var.chef_org_validator}")}"
+    version         = "${var.client_version}"
   }
-}
-# Public Route53 DNS record
-resource "aws_route53_record" "chef-supermarket" {
-  count    = "${var.r53}"
-  zone_id  = "${var.r53_zone_id}"
-  name     = "${aws_instance.chef-supermarket.tags.Name}"
-  type     = "A"
-  ttl      = "${var.r53_ttl}"
-  records  = ["${aws_instance.chef-supermarket.public_ip}"]
-}
-# Private Route53 DNS record
-resource "aws_route53_record" "chef-supermarket-private" {
-  count    = "${var.r53}"
-  zone_id  = "${var.r53_zone_internal_id}"
-  name     = "${aws_instance.chef-supermarket.tags.Name}"
-  type     = "A"
-  ttl      = "${var.r53_ttl}"
-  records  = ["${aws_instance.chef-supermarket.private_ip}"]
 }
 
