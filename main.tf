@@ -72,7 +72,7 @@ resource "null_resource" "oc_id-supermarket" {
       [ $? -ne 0 ] && rm -f .supermarket/attributes.json.orig && echo "Taking a 30s nap" && sleep 30 && bash ${path.module}/files/chef_api_request GET "/nodes/${var.chef_fqdn}" | jq '.normal' > .supermarket/attributes.json.orig
       grep -q 'applications' .supermarket/attributes.json.orig
       result=$?
-      [ $result -eq 0 ] && sed "s/\(applications.*\\\n  }\)\\\n/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n"  .supermarket/attributes.json.orig > .supermarket/attributes.json
+      [ $result -eq 0 ] && sed "s/\(applications.*\\\n  }\)\\\n/\1,\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback\/'\\\n  }\\\n/"  .supermarket/attributes.json.orig > .supermarket/attributes.json
       [ $result -ne 0 ] && sed "s/\(configuration.*\)\",/\1\\\noc_id['applications'] = {\\\n  'supermarket' => {\\\n    'redirect_uri' => 'https:\/\/${var.hostname}.${var.domain}\/auth\/chef_oauth2\/callback'\\\n  }\\\n}\\\n\",/" .supermarket/attributes.json.orig > .supermarket/attributes.json
       echo "Modified Chef server attributes"
       EOC
@@ -80,7 +80,7 @@ resource "null_resource" "oc_id-supermarket" {
   # Upload new attributes file
   provisioner "file" {
     source      = ".supermarket/attributes.json"
-    destination = "attributes.json"
+    destination = "supermarket-attributes.json"
   }
   # Execute new Chef run if no supermarket.json exists
   provisioner "remote-exec" {
@@ -88,8 +88,8 @@ resource "null_resource" "oc_id-supermarket" {
       "rm -rf .supermarket ; mkdir -p .supermarket",
       "[ -f /etc/opscode/oc-id-applications/supermarket.json ] && echo ABORT ABORT ABORT ABORT",
       "[ -f /etc/opscode/oc-id-applications/supermarket.json ] && exit 1",
-      "sudo chef-client -j attributes.json",
-      "rm -f attributes.json",
+      "sudo chef-client -j supermarket-attributes.json",
+      "rm -f supermarket-attributes.json",
       "sudo cp /etc/opscode/oc-id-applications/supermarket.json .supermarket/supermarket.json",
       "sudo chown ${lookup(var.ami_usermap, var.ami_os)} .supermarket/supermarket.json",
     ]
