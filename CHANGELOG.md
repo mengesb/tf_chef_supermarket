@@ -3,6 +3,10 @@ tf_chef_supermarket CHANGELOG
 
 This file is used to list changes made in each version of the tf_chef_supermarket Terraform plan.
 
+v0.0.10 (2016-04-22)
+-------------------
+- [Brian Menges] - Missing provider
+
 v0.0.9 (2016-04-21)
 -------------------
 - [Brian Menges] - Updated usage of `wait_on`
