@@ -56,8 +56,17 @@ resource "template_file" "attributes-json" {
     oauth_sec = "text2"
   }
 }
+#
+# Wait on
+#
+resource "null_resource" "wait_on" {
+  provisioner "local-exec" {
+    command = "echo Waited on ${var.wait_on} before proceeding"
+  }
+}
+# Update oc-id service for Supermarket
 resource "null_resource" "oc_id-supermarket" {
-  depends_on = ["template_file.attributes-json"]
+  depends_on = ["template_file.attributes-json","null_resource.wait_on"]
   connection {
     user        = "${lookup(var.ami_usermap, var.ami_os)}"
     private_key = "${var.aws_private_key_file}"
@@ -126,22 +135,10 @@ resource "null_resource" "oc_id-supermarket" {
       EOC
   }
 }
+# File redirection for locally created resource that needs to be referenced
 module "ocid-attributes" {
   source     = "ocid-attributes"
   attributes = ".supermarket/${var.hostname}.${var.domain}-attributes.json"
-}
-#
-# Wait on
-#
-resource "null_resource" "wait_on" {
-  provisioner "local-exec" {
-    command = "echo Waited on ${var.wait_on} before proceeding"
-  }
-}
-provider "aws" {
-  access_key = "${var.aws_access_key}"
-  secret_key = "${var.aws_secret_key}"
-  region     = "${var.aws_region}"
 }
 #
 # Provision server
