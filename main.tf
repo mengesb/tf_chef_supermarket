@@ -43,12 +43,15 @@ resource "aws_security_group_rule" "chef-supermarket_allow_all" {
   cidr_blocks = ["0.0.0.0/0"]
   security_group_id = "${aws_security_group.chef-supermarket.id}"
 }
+# AWS settings
 provider "aws" {
   access_key  = "${var.aws_access_key}"
   secret_key  = "${var.aws_secret_key}"
   region      = "${var.aws_region}"
 }
-# Hack chef-server's attributes to support a private supermarket
+#
+# Provisioning template
+#
 resource "template_file" "attributes-json" {
   template = "${file("${path.module}/files/attributes-json.tpl")}"
   vars {
@@ -169,6 +172,7 @@ resource "aws_instance" "chef-supermarket" {
     private_key = "${var.aws_private_key_file}"
     host        = "${self.public_ip}"
   }
+  # Clean up any potential node/client conflicts
   provisioner "local-exec" {
     command = "knife node-delete   ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
   }
@@ -184,12 +188,14 @@ resource "aws_instance" "chef-supermarket" {
       "echo Say WHAT one more time"
     ]
   }
+  # Prepare some directories to stage files
   provisioner "remote-exec" {
     inline = [
       "mkdir -p .supermarket",
       "sudo mkdir -p /var/opt/supermarket/ssl",
     ]
   }
+  # Transfer in required files
   provisioner "file" {
     source      = "${var.ssl_cert}"
     destination = ".supermarket/${var.hostname}.${var.domain}.crt"
@@ -198,6 +204,7 @@ resource "aws_instance" "chef-supermarket" {
     source      = "${var.ssl_key}"
     destination = ".supermarket/${var.hostname}.${var.domain}.key"
   }
+  # Move files to final location
   provisioner "remote-exec" {
     inline = [
       "sudo mv .supermarket/${var.hostname}.${var.domain}.* /var/opt/supermarket/ssl",
@@ -210,7 +217,7 @@ resource "aws_instance" "chef-supermarket" {
     environment     = "_default"
     log_to_file     = "${var.log_to_file}"
     node_name       = "${aws_instance.chef-supermarket.tags.Name}"
-    run_list        = ["recipe[system::default]","recipe[chef-client::default]","recipe[chef-client::config]","recipe[chef-client::delete_validation]","recipe[supermarket-omnibus-cookbook::default]"]
+    run_list        = ["recipe[system::default]","recipe[chef-client::default]","recipe[chef-client::config]","recipe[chef-client::cron]","recipe[chef-client::delete_validation]","recipe[supermarket-omnibus-cookbook::default]"]
     server_url      = "https://${var.chef_fqdn}/organizations/${var.chef_org}"
     validation_client_name = "${var.chef_org}-validator"
     validation_key  = "${file("${var.chef_org_validator}")}"
