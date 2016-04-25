@@ -3,6 +3,11 @@ tf_chef_supermarket CHANGELOG
 
 This file is used to list changes made in each version of the tf_chef_supermarket Terraform plan.
 
+v0.1.0 (2016-04-25)
+-------------------
+- [Brian Menges] - Update runlist
+- [Brian Menges] - Update comments
+
 v0.0.10 (2016-04-22)
 -------------------
 - [Brian Menges] - Missing provider
