@@ -3,6 +3,10 @@ tf_chef_supermarket CHANGELOG
 
 This file is used to list changes made in each version of the tf_chef_supermarket Terraform plan.
 
+v0.1.1 (2016-05-10)
+-------------------
+- [Brian Menges] - Add `chef_identity_url` to [attributes-json.tpl](files/attributes-json.tpl)
+
 v0.1.0 (2016-04-25)
 -------------------
 - [Brian Menges] - Update runlist

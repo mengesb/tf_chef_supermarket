@@ -8,6 +8,7 @@
     "allow_ssh": true
   },
   "supermarket_omnibus": {
+    "chef_identity_url": "${chef_fqdn}/id",
     "chef_oauth2_app_id": "${oauth_id}",
     "chef_oauth2_secret": "${oauth_sec}",
     "chef_oauth2_verify_ssl": true,
